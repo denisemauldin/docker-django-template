@@ -1,0 +1,76 @@
+version: '3.7'
+
+networks:
+  webservice_network:
+    driver: bridge
+
+services:
+
+  application:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+        - DEBUG=1
+        - DB_PASS=A4D&q*m47!bMmT82LXEC9^!dS
+        - DB_HOST=postgres
+        - DB_PORT=5432
+        - DB_USER=application
+        - DB_NAME=application
+        - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+    ports:
+      - 8000:8000
+    depends_on:
+      - postgres
+    volumes:
+      - ./application:/app/
+      - '/app/ve'
+    networks:
+      - webservice_network
+
+  postgres:
+    image: postgres:12.2-alpine
+    environment:
+        - POSTGRES_PASSWORD=A4D&q*m47!bMmT82LXEC9^!dS
+        - POSTGRES_PORT=5432
+        - POSTGRES_USER=application
+        - POSTGRES_DB=application
+    volumes:
+      - ./pgdata/:/var/lib/postgresql/data/
+    ports:
+      - 5432:5432
+    networks:
+      - webservice_network
+
+  redis:
+    image: redis:alpine
+    networks:
+      - webservice_network
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A application worker -l info
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+    depends_on:
+      - redis
+    networks:
+      - webservice_network
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A application beat -l info
+    environment:
+      - DEBUG=1
+      - SECRET_KEY=dbaa1_i7%*3r9-=z-+_mz4r-!qeed@(-a_r(g@k8jo8y3r27%m
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 [::1]
+    depends_on:
+      - redis
+    networks:
+      - webservice_network
